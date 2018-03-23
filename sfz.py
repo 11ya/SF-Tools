@@ -47,8 +47,8 @@ class SFZ:
 			lineNumber += 1
 			try:
 				self.processLine(line)
-			except SFZParseError:
-				logging.error("Error on line {} of file {}".format(lineNumber, fileName))
+			except SFZParseError as e:
+				logging.error("Error on line {} of file {}: {}".format(lineNumber, fileName, e))
 				inFile.close()
 				return False
 
@@ -367,16 +367,16 @@ class SFZ:
 			if noteNum >= 0 and noteNum <= 127:
 				return noteNum;
 
-		match = re.search('^([abcdefgABCDEFG])([b#]?)(-?[0-9])$', note)
+		match = re.search('^([abcdefgABCDEFG])(-?[0-9])([b#]?)$', note)
 		if not match:
 			raise SFZParseError
 		noteNum = SFZ.noteValue[match.group(1).upper()]
-		if match.group(2):
-			if match.group(2) == '#':
+		if match.group(3):
+			if match.group(3) == '#':
 				noteNum += 1
-			elif match.group(2) == 'b':
+			elif match.group(3) == 'b':
 				noteNum -= 1
-		octave = int(match.group(3))
+		octave = int(match.group(2))
 		if octave < -1 or octave > 9:
 			raise SFZParseError
 		noteNum += (octave + 1) * 12
