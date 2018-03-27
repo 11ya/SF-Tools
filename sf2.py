@@ -19,7 +19,7 @@
 
 import struct, logging, os, math, sys
 import dateutil.parser
-import soundfile
+from pydub import AudioSegment
 
 
 class SF2ExportError(Exception):
@@ -216,11 +216,18 @@ class SF2:
 					if not os.path.isabs(samplePath) and 'Path' in self.soundBank.keys():
 						samplePath = os.path.join(self.soundBank['Path'], sample)
 					try:
-						data, rate = soundfile.read(file=samplePath, dtype='int16', always_2d=True)
+						fileExtension = os.path.splitext(samplePath)[1][1:]
+						audio = AudioSegment.from_file(samplePath, fileExtension)
 					except:
 						logging.error("Can not read input audio file {}".format(samplePath))
 						raise SF2ExportError
-					channels = len(data[0])
+					channels = audio.channels
+					if channels == 2:
+						stereo = audio.split_to_mono()
+						data = [stereo[0].get_array_of_samples(), stereo[1].get_array_of_samples()]
+					else:
+						data = [audio.get_array_of_samples()]
+					rate = audio.frame_rate
 					if channels < 1:
 						logging.error("Can not read data from audio file {}".format(samplePath))
 						raise SF2ExportError
@@ -232,8 +239,8 @@ class SF2:
 					self.sampleList[sample] = [channels, sampleIndex, pitch]
 					for ch in range(0, channels):
 						start = len(smplData) // 2
-						for n in data:
-							smplData += struct.pack('<h', n[ch])
+						for n in data[ch]:
+							smplData += struct.pack('<h', n)
 						end = len(smplData) // 2
 						smplData += bytes(46 * 2)
 
